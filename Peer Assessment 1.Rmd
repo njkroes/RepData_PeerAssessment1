@@ -1,0 +1,61 @@
+#Peer Assessment 1
+```{r echo=FALSE}
+# Load libraries
+library(plyr)
+```
+
+###Loading and preprocessing the data
+
+* First we need to load the activity data that we will be analyzing
+```{r}
+# Read data using read.csv()
+data <- read.csv("activity.csv", na.strings=c("NA"))
+```
+
+### What is the mean total number of steps taken per day?
+
+* Calculate the total number of steps taken per day:
+```{r}
+# Remove NA values
+data <- data[is.na(data$steps)==0,]
+
+# Summarize steps by day using plyr library
+dailySteps <- ddply(data, .(date), summarize, steps=sum(steps))
+```
+
+* Histogram of steps taken per day:
+
+```{r echo=FALSE}
+hist(dailySteps$steps)
+```
+
+* Calculate the mean and median of the total steps taken per day
+
+```{r}
+# Calculate mean of steps taken per day
+mean(dailySteps$steps)
+
+# Calculate median of steps taken per day
+median(dailySteps$steps)
+```
+
+### What is the average daily activity pattern?
+
+* Calculate the average number of steps taken per 5 minute interval
+```{r}
+# Summarize steps per interval
+intervalSteps <- ddply(data, .(interval), summarize, steps=mean(steps))
+```
+
+* Plot of average number of steps taken per interval
+```{r echo=FALSE}
+plot(intervalSteps$interval, intervalSteps$steps, type="l")
+```
+
+```{r echo=FALSE}
+maxInterval <- head(intervalSteps[order(-intervalSteps$steps),], 1)
+```
+
+* The 5 minute interval with the highest average number of steps is **`r maxInterval$interval`** with an average of **`r maxInterval$steps` steps**.
+
+
