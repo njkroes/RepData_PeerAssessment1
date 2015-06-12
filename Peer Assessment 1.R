@@ -14,3 +14,8 @@ intervalSteps <- ddply(data, .(interval), summarize, steps=mean(steps))
 
 
 str(data)
+
+
+meanStepsPerInterval <- ddply(data[complete.cases(data),], .(interval), summarize, meanSteps=mean(steps))
+
+data$steps[is.na(data$steps)] <- meanStepsPerInterval[meanStepsPerInterval$interval==data$]
