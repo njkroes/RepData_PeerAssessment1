@@ -1,25 +1,128 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+#Peer Assessment 1
+```{r echo=FALSE}
+# Load libraries
+library(plyr)
+```
 
+###Loading and preprocessing the data
 
-## Loading and preprocessing the data
+* First we need to load the activity data that we will be analyzing
+```{r loadData}
+# Read data using read.csv()
+data <- read.csv("activity.csv", na.strings=c("NA"))
+```
 
+###What is the mean total number of steps taken per day?
 
+* Calculate the total number of steps taken per day:
+```{r}
+# Remove NA values
+data <- data[is.na(data$steps)==0,]
 
-## What is mean total number of steps taken per day?
+# Summarize steps by day using plyr library
+dailySteps <- ddply(data, .(date), summarize, steps=sum(steps))
+```
 
+* Histogram of steps taken per day:
 
+```{r echo=FALSE}
+hist(dailySteps$steps, xlab="Steps", main="Histogram of Steps Taken Per Day")
+```
 
-## What is the average daily activity pattern?
+* Calculate the mean and median of the total steps taken per day
 
+```{r}
+# Calculate mean of steps taken per day
+meanDailySteps <- format(round(mean(dailySteps$steps), digits=2), nsmall=2)
 
+# Calculate median of steps taken per day
+medianDailySteps <- as.integer(median(dailySteps$steps))
+```
 
-## Imputing missing values
+* The mean for daily steps = `r meanDailySteps`
+* The median for daily steps = `r medianDailySteps`
 
+###What is the average daily activity pattern?
 
+* Calculate the average number of steps taken per 5 minute interval
+```{r}
+# Summarize steps per interval
+intervalSteps <- ddply(data, .(interval), summarize, steps=mean(steps))
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+* Plot of average number of steps taken per interval
+```{r echo=FALSE}
+plot(intervalSteps$interval, intervalSteps$steps, type="l", xlab="Interval", ylab="Steps")
+```
+
+```{r echo=FALSE}
+maxInterval <- head(intervalSteps[order(-intervalSteps$steps),], 1)
+```
+
+* The 5 minute interval with the highest average number of steps is **`r maxInterval$interval`** with an average of **`r maxInterval$steps` steps**.
+
+###Imputting missing values
+
+* Let's load up all the data again including the missing values:
+```{r ref.label='loadData'}
+```
+
+* Let's find all of the missing values
+```{r}
+# Find the incomplete cases and count
+nrow(data[complete.cases(data)==0,])
+```
+
+* Now let's get the mean per interval to replace the missing values
+```{r}
+# Calculate the mean per interval
+meanStepsPerInterval <- ddply(data[complete.cases(data),], .(interval), summarize, meanSteps=mean(steps))
+
+# Merge data frames
+data <- merge(data, meanStepsPerInterval, by.x="interval", by.y="interval")
+
+# Set steps to meanSteps where steps is NA
+data[is.na(data$steps),]$steps <- data[is.na(data$steps),]$meanSteps
+
+# Summarize steps by day using plyr library
+newDailySteps <- ddply(data, .(date), summarize, steps=sum(steps))
+```
+
+* Here's a histogram of the data set with the missing values replaced:
+```{r echo=FALSE}
+hist(newDailySteps$steps, xlab="Steps", main="Histogram of Steps Taken Per Day")
+```
+
+* Calculate the mean and median of the total steps taken per day for the new data set:
+
+```{r}
+# Calculate mean of steps taken per day
+newMeanDailySteps <- format(round(mean(newDailySteps$steps), digits=2), nsmall=2)
+
+# Calculate median of steps taken per day
+newMedianDailySteps <- as.integer(median(newDailySteps$steps))
+```
+
+* The new mean for daily steps = `r newMeanDailySteps`. The previous value was `r meanDailySteps`. This is a difference of `r as.numeric(meanDailySteps) - as.numeric(newMeanDailySteps)`
+* The new median for daily steps = `r newMedianDailySteps`. The previous value was `r medianDailySteps`. This is a difference of `r medianDailySteps - newMedianDailySteps`
+
+Replacing the missing values with the mean for the same interval does not appear to significantly affect the results.
+
+###Are there differences in activity patterns between weekdays and weekends?
+* Figure out which days are weekends
+```{r}
+# Convert date field to POSIXlt data type
+data$date <- as.POSIXlt(data$date)
+
+# Add weekend variable
+data$weekend <- ifelse(data$date$wday %in% c(0, 6), "Weekend", "Weekday")
+
+# Summarize data by weekend vs weekday
+sumData <- ddply(data, c("interval", "weekend"), summarize, meanSteps=mean(steps))
+```
+
+* Graph data
+```{r}
+library(lattice)
+xyplot(data$steps ~ data$interval | data$weekend, layout = c(1,2), type="l", xlab="Interval", ylab="Steps")
+```
